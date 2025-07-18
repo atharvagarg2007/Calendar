@@ -13,7 +13,7 @@ app.config.update(
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
     MAIL_USERNAME='yourpersonalcalendar2025@gmail.com',  
-    MAIL_PASSWORD='qtws boba rzxd lzdw'               
+    MAIL_PASSWORD=''               
 )
 mail = Mail(app)
 s = URLSafeTimedSerializer(app.secret_key)
