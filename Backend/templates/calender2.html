@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Personal Calendar</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
+
+  <style>
+    #calendar {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    .fc .fc-toolbar-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body
+  class="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center px-4 py-8"
+  style="background-image: url('{{ url_for('static', filename='background.jpg') }}');"
+>
+
+  <h2 class="text-3xl font-bold mb-6 text-white drop-shadow-md text-center">
+    📅 Your Personal Calendar
+  </h2>
+
+  <div class="bg-white bg-opacity-90 backdrop-blur-md shadow-xl rounded-2xl p-4 w-full max-w-5xl">
+    <div id="calendar"></div>
+  </div>
+
+  <!-- Modal for adding event -->
+  <div id="eventModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+      <h3 class="text-lg font-semibold text-center">Add Event</h3>
+      <input type="text" id="eventTitle" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Event Title">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">Cancel</button>
+        <button onclick="saveEvent()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+
+  <script>
+    let selectedDate = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const calendarEl = document.getElementById('calendar');
+
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        selectable: true,
+        editable: true,
+        events: '/events', // Fetch from Flask backend
+
+        dateClick: function (info) {
+          selectedDate = info.dateStr;
+          openModal();
+        },
+
+        eventClick: function(info) {
+          if (confirm(`Delete event "${info.event.title}"?`)) {
+            fetch('/add-events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: info.event.id })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                info.event.remove();  // Remove event from calendar UI
+              } else {
+                alert('Failed to delete event.');
+              }
+            });
+          }
+        }
+      });
+
+      calendar.render();
+
+      // Modal functions
+      window.openModal = function () {
+        document.getElementById('eventModal').classList.remove('hidden');
+      };
+
+      window.closeModal = function () {
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventModal').classList.add('hidden');
+      };
+
+      window.saveEvent = function () {
+        const title = document.getElementById('eventTitle').value.trim();
+        if (title) {
+          fetch('/add-event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              title: title,
+              start: selectedDate
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              calendar.refetchEvents();
+              closeModal();
+            } else {
+              alert('Error saving event.');
+            }
+          });
+        }
+      };
+    });
+  </script>
+</body>
+</html>
